@@ -1,0 +1,5 @@
+# Minimal requirements.txt for Vercel Flask detection
+# This file prevents Vercel from erroring about missing Flask entrypoint
+# The Next.js app is the primary deployment
+Flask==3.0.0
+
