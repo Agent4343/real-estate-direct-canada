@@ -1,0 +1,20 @@
+# Ignore Python files to prevent Flask detection
+requirements.txt
+setup.py
+tests/
+*.py
+
+# Ignore backend files
+app.js
+routes/
+models/
+middleware/
+config/
+utils/
+node_modules/
+uploads/
+
+# Ignore documentation files
+*.md
+!frontend/README.md
+
