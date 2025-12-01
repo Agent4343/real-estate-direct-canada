@@ -1,10 +1,18 @@
-# Ignore Python files to prevent Flask detection
-requirements.txt
-setup.py
-tests/
+# Ignore ALL Python files to prevent Flask detection
 *.py
+requirements.txt
+requirements.txt.backup
+setup.py
+setup.py.backup
+pyproject.toml
+tests/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
 
-# Ignore backend files
+# Ignore backend files (Express server - deploy separately)
 app.js
 routes/
 models/
@@ -17,4 +25,3 @@ uploads/
 # Ignore documentation files
 *.md
 !frontend/README.md
-
