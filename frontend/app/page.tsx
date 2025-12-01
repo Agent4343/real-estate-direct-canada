@@ -6,9 +6,30 @@ import { propertiesAPI } from '@/lib/api'
 import PropertyCard from '@/components/property/PropertyCard'
 import SearchFilters from '@/components/property/SearchFilters'
 
+interface Property {
+  _id: string
+  title: string
+  description?: string
+  address?: {
+    street?: string
+    city?: string
+    province?: string
+    postalCode?: string
+  }
+  city?: string
+  province?: string
+  price: number
+  propertyType: string
+  bedrooms?: number
+  bathrooms?: number
+  squareFootage?: number
+  status?: string
+  images?: Array<{ url: string }>
+}
+
 export default function HomePage() {
   const [mounted, setMounted] = useState(false)
-  const [properties, setProperties] = useState([])
+  const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     province: '',
@@ -104,7 +125,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
+            {properties.map((property: Property) => (
               <PropertyCard key={property._id} property={property} />
             ))}
           </div>
