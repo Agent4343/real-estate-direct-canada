@@ -1,6 +1,0 @@
-# Ignore everything except frontend folder
-*
-!frontend/
-!.gitignore
-!vercel.json
-
