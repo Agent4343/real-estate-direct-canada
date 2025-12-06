@@ -57,6 +57,7 @@ export const authAPI = {
 // Properties API
 export const propertiesAPI = {
   getAll: (params) => api.get('/api/properties', { params }),
+  getMine: (params) => api.get('/api/properties/mine', { params }),
   getById: (id) => api.get(`/api/properties/${id}`),
   create: (data) => api.post('/api/properties', data),
   update: (id, data) => api.put(`/api/properties/${id}`, data),
