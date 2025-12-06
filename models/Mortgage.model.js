@@ -201,8 +201,12 @@ mortgageSchema.statics.findBestMortgages = function(province, loanAmount, downPa
     query.validUntil = { $gte: new Date() };
   }
   
-  if (loanAmount && this.maxLoanAmount) {
-    query.maxLoanAmount = { $gte: loanAmount };
+  if (loanAmount) {
+    query.$or = [
+      { maxLoanAmount: { $gte: loanAmount } },
+      { maxLoanAmount: null },
+      { maxLoanAmount: { $exists: false } }
+    ];
   }
   
   return this.find(query)

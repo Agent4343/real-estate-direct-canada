@@ -26,6 +26,23 @@ export default function MortgagesPage() {
     }
   }
 
+  const formatTermLabel = (mortgage) => {
+    if (!mortgage) return 'N/A'
+    const termYears = mortgage.termYears ?? (mortgage.term ? mortgage.term / 12 : null)
+    if (!termYears) {
+      return 'N/A'
+    }
+    const numericYears = Number(termYears)
+    const formatted = Number.isFinite(numericYears)
+      ? Number.isInteger(numericYears)
+        ? numericYears
+        : numericYears.toFixed(1)
+      : termYears
+    return `${formatted} years`
+  }
+
+  const getMortgageType = (mortgage) => mortgage?.mortgageType || mortgage?.type || 'N/A'
+
   const provinces = ['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU']
 
   return (
@@ -67,8 +84,8 @@ export default function MortgagesPage() {
                 <p className="text-2xl font-bold text-green-600">
                   {mortgage.interestRate}% APR
                 </p>
-                <p className="text-gray-600">Term: {mortgage.term} years</p>
-                <p className="text-gray-600">Type: {mortgage.type}</p>
+                <p className="text-gray-600">Term: {formatTermLabel(mortgage)}</p>
+                <p className="text-gray-600">Type: {getMortgageType(mortgage)}</p>
                 {mortgage.minCreditScore && (
                   <p className="text-gray-600">Min Credit Score: {mortgage.minCreditScore}</p>
                 )}

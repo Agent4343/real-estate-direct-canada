@@ -80,7 +80,13 @@ export const transactionsAPI = {
 export const mortgagesAPI = {
   getAll: () => api.get('/api/mortgages'),
   getByProvince: (province) => api.get(`/api/mortgages/province/${province}`),
-  getBest: (province) => api.get(`/api/mortgages/best/${province}`),
+  getBest: (province, filters = {}) => {
+    const params = { ...(filters || {}) };
+    if (province) {
+      params.province = province;
+    }
+    return api.get('/api/mortgages/best', { params });
+  },
 };
 
 // Lawyers API

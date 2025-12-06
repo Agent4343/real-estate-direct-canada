@@ -91,18 +91,16 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * @route   GET /api/mortgages/best
- * @desc    Get best mortgage offers for specific criteria
- * @access  Public
+ * Shared handler for fetching best mortgage offers
  */
-router.get('/best', async (req, res) => {
+async function handleGetBestMortgages(req, res) {
   try {
     const {
-      province,
       loanAmount,
       downPayment,
       term
     } = req.query;
+    const province = (req.query.province || req.params?.province || '').toUpperCase();
 
     if (!province || !isValidProvince(province)) {
       return res.status(400).json({ 
@@ -132,6 +130,25 @@ router.get('/best', async (req, res) => {
     console.error('Error fetching best mortgages:', err);
     res.status(500).json({ message: 'Error fetching best mortgages', error: err.message });
   }
+}
+
+/**
+ * @route   GET /api/mortgages/best
+ * @desc    Get best mortgage offers for specific criteria via query params
+ * @access  Public
+ */
+router.get('/best', handleGetBestMortgages);
+
+/**
+ * @route   GET /api/mortgages/best/:province
+ * @desc    Backwards-compatible path param support for best mortgages
+ * @access  Public
+ */
+router.get('/best/:province', (req, res) => {
+  if (!req.query.province) {
+    req.query.province = req.params.province;
+  }
+  return handleGetBestMortgages(req, res);
 });
 
 /**
