@@ -42,13 +42,8 @@ export default function DashboardPage() {
     try {
       // Load user's properties
       try {
-        const propsResponse = await propertiesAPI.getAll({})
-        const allProperties = propsResponse.data.properties || []
-        const userProps = allProperties.filter(p => {
-          const sellerId = p.sellerId?._id || p.sellerId
-          return sellerId && sellerId.toString() === user._id.toString()
-        })
-        setMyProperties(userProps)
+        const propsResponse = await propertiesAPI.getMine()
+        setMyProperties(propsResponse.data.properties || [])
       } catch (err) {
         console.error('Error loading properties:', err)
       }

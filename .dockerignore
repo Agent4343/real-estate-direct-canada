@@ -1,0 +1,12 @@
+.git
+node_modules
+npm-debug.log
+Dockerfile
+docker-compose.yml
+frontend/
+docs/
+uploads/
+*.md
+*.log
+.gitignore
+.vercel/
