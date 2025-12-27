@@ -112,6 +112,7 @@ export const notificationsAPI = {
   getUnreadCount: () => api.get('/api/notifications/unread-count'),
   markAsRead: (id) => api.put(`/api/notifications/${id}/read`),
   markAllAsRead: () => api.put('/api/notifications/read-all'),
+  delete: (id) => api.delete(`/api/notifications/${id}`),
 };
 
 // Mortgage Calculator API
