@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUser } from '@/lib/auth'
+import { getAuthToken, getUser } from '@/lib/auth'
 import { notificationsAPI } from '@/lib/api'
 
 export default function NotificationsPage() {
@@ -10,6 +10,7 @@ export default function NotificationsPage() {
   const [mounted, setMounted] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filter, setFilter] = useState('all') // all, unread, read
 
   useEffect(() => {
@@ -34,10 +35,22 @@ export default function NotificationsPage() {
   }, [mounted])
 
   const loadNotifications = async () => {
+    const token = getAuthToken()
+    if (!token) {
+      setError('Please log in to view notifications.')
+      setNotifications([])
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
+      setError('')
       const response = await notificationsAPI.getAll()
-      let allNotifications = response.data.notifications || []
+      let allNotifications = (response.data.notifications || []).map((n) => ({
+        ...n,
+        read: n.read ?? n.isRead ?? false,
+      }))
       
       // Apply filter
       if (filter === 'unread') {
@@ -51,6 +64,14 @@ export default function NotificationsPage() {
       
       setNotifications(allNotifications)
     } catch (error) {
+      if (error.response?.status === 401) {
+        setError('Your session expired. Please log in again to view notifications.')
+        router.push('/login')
+      } else if (error.response?.status === 404) {
+        setError('Notifications service is unavailable right now.')
+      } else {
+        setError('Unable to load notifications. Please try again shortly.')
+      }
       console.error('Error loading notifications:', error)
     } finally {
       setLoading(false)
@@ -63,16 +84,17 @@ export default function NotificationsPage() {
       loadNotifications()
     } catch (error) {
       console.error('Error marking notification as read:', error)
+      setError('Could not update notification status. Please retry.')
     }
   }
 
   const markAllAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter(n => !n.read)
-      await Promise.all(unreadNotifications.map(n => notificationsAPI.markAsRead(n._id)))
+      await notificationsAPI.markAllAsRead()
       loadNotifications()
     } catch (error) {
       console.error('Error marking all as read:', error)
+      setError('Could not mark all notifications as read. Please try again.')
     }
   }
 
@@ -82,6 +104,12 @@ export default function NotificationsPage() {
       loadNotifications()
     } catch (error) {
       console.error('Error deleting notification:', error)
+      if (error.response?.status === 401) {
+        setError('Your session expired. Please log in again to manage notifications.')
+        router.push('/login')
+      } else {
+        setError('Could not delete the notification. Please try again.')
+      }
     }
   }
 
@@ -147,6 +175,12 @@ export default function NotificationsPage() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-4 mb-6 border-b">

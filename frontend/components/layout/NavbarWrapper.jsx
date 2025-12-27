@@ -44,6 +44,9 @@ export default function NavbarWrapper() {
             <Link href="/lawyers" className="text-gray-700 hover:text-blue-600 transition" suppressHydrationWarning>
               Lawyers
             </Link>
+            <Link href="/guides" className="text-gray-700 hover:text-blue-600 transition" suppressHydrationWarning>
+              Guides
+            </Link>
             <Link href="/calculator" className="text-gray-700 hover:text-blue-600 transition" suppressHydrationWarning>
               Calculator
             </Link>
@@ -107,6 +110,7 @@ export default function NavbarWrapper() {
             <Link href="/properties" className="block text-gray-700 hover:text-blue-600" suppressHydrationWarning>Properties</Link>
             <Link href="/mortgages" className="block text-gray-700 hover:text-blue-600" suppressHydrationWarning>Mortgages</Link>
             <Link href="/lawyers" className="block text-gray-700 hover:text-blue-600" suppressHydrationWarning>Lawyers</Link>
+            <Link href="/guides" className="block text-gray-700 hover:text-blue-600" suppressHydrationWarning>Guides</Link>
             {showUserContent ? (
               <>
                 <Link href="/dashboard" className="block text-gray-700 hover:text-blue-600" suppressHydrationWarning>Dashboard</Link>
