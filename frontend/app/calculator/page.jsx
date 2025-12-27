@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { mortgageCalculatorAPI } from '@/lib/api'
+import SavingsCalculator from '@/components/calculators/SavingsCalculator'
 
 export default function CalculatorPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,39 @@ export default function CalculatorPage() {
   })
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // Provide a defensive global for any legacy calls to calculateSavings
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const original = window.calculateSavings
+    window.calculateSavings = () => {
+      // Safely read optional inputs if they exist; otherwise no-op
+      const priceInput = document.getElementById('price')
+      const rateInput = document.getElementById('commissionRate')
+
+      const priceValue = priceInput?.value
+      const rateValue = rateInput?.value
+
+      if (!priceValue || !rateValue) return null
+
+      const price = Number(priceValue)
+      const rate = Number(rateValue) / 100
+      if (Number.isNaN(price) || Number.isNaN(rate) || price <= 0 || rate < 0) {
+        return null
+      }
+
+      return price * rate
+    }
+
+    return () => {
+      if (original) {
+        window.calculateSavings = original
+      } else {
+        delete window.calculateSavings
+      }
+    }
+  }, [])
 
   const handleCalculate = async (e) => {
     e.preventDefault()
@@ -140,6 +174,10 @@ export default function CalculatorPage() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mt-10">
+        <SavingsCalculator />
       </div>
     </div>
   )
