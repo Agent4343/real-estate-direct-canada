@@ -8,6 +8,10 @@ const Footer = dynamic(() => import('@/components/layout/Footer'), {
   ssr: true,
 })
 
+const ClientGuards = dynamic(() => import('@/components/GlobalGuards'), {
+  ssr: false,
+})
+
 // Navbar must be client-side only due to localStorage access
 const Navbar = dynamic(() => import('@/components/layout/NavbarWrapper'), {
   ssr: false,
@@ -20,6 +24,7 @@ const Navbar = dynamic(() => import('@/components/layout/NavbarWrapper'), {
             <a href="/properties" className="text-gray-700 hover:text-blue-600 transition">Properties</a>
             <a href="/mortgages" className="text-gray-700 hover:text-blue-600 transition">Mortgages</a>
             <a href="/lawyers" className="text-gray-700 hover:text-blue-600 transition">Lawyers</a>
+            <a href="/guides" className="text-gray-700 hover:text-blue-600 transition">Guides</a>
             <a href="/login" className="text-gray-700 hover:text-blue-600 transition">Login</a>
             <a href="/register" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Sign Up</a>
           </div>
@@ -45,6 +50,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <div suppressHydrationWarning>
+          <ClientGuards />
           <Navbar />
           <main className="min-h-screen" suppressHydrationWarning>
             {children}
