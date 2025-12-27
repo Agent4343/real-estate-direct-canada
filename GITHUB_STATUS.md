@@ -1,5 +1,7 @@
 # GitHub Push Status
 
+Current working branch: **`work`** (local only)
+
 As of this update, the repository changes are committed locally on the `work` branch but have **not** been pushed to GitHub. There is currently **no remote configured** (`git remote -v` returns nothing), so the code only exists in this local workspace.
 
 ## How to push the latest commits
