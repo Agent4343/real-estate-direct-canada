@@ -11,32 +11,52 @@ export default function GlobalGuards() {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
 
-    // Only provide a fallback if no calculator exists yet.
-    const existing = window.calculateSavings
+    const existing = typeof window.calculateSavings === 'function' ? window.calculateSavings : null
 
-    if (typeof existing !== 'function') {
-      window.calculateSavings = () => {
-        const priceInput = document?.getElementById?.('price')
-        const rateInput = document?.getElementById?.('commissionRate')
+    // Always provide a defensive wrapper so legacy scripts cannot crash
+    // when their expected DOM nodes are missing.
+    window.calculateSavings = (...args) => {
+      const priceInput = document?.getElementById?.('price')
+      const rateInput = document?.getElementById?.('commissionRate')
 
-        const priceValue = priceInput?.value
-        const rateValue = rateInput?.value
+      const priceValue = priceInput?.value
+      const rateValue = rateInput?.value
 
-        if (!priceValue || !rateValue) return null
+      if (!priceValue || !rateValue) {
+        if (!existing) return null
 
-        const price = Number(priceValue)
-        const rate = Number(rateValue) / 100
-
-        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(rate) || rate < 0) {
+        try {
+          return existing(...args)
+        } catch (err) {
+          console.warn('calculateSavings skipped because inputs were missing', err)
           return null
         }
-
-        return price * rate
       }
+
+      const price = Number(priceValue)
+      const rate = Number(rateValue) / 100
+
+      if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(rate) || rate < 0) {
+        return null
+      }
+
+      // Prefer the legacy implementation when it exists, but fall back
+      // to the simple calculation if it errors.
+      if (existing) {
+        try {
+          return existing(...args)
+        } catch (err) {
+          console.warn('Legacy calculateSavings threw; falling back', err)
+        }
+      }
+
+      return price * rate
     }
 
     return () => {
-      if (existing === undefined) {
+      if (existing) {
+        window.calculateSavings = existing
+      } else {
         delete window.calculateSavings
       }
     }
