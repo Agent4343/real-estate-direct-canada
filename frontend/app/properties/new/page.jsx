@@ -14,12 +14,13 @@ export default function NewPropertyPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    city: '',
     address: {
       street: '',
-      city: '',
       province: '',
       postalCode: '',
     },
+    postalCode: '',
     price: '',
     propertyType: '',
     bedrooms: '',
@@ -46,10 +47,39 @@ export default function NewPropertyPage() {
   }
 
   const provinces = ['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU']
-  const propertyTypes = ['House', 'Condo', 'Townhouse', 'Apartment', 'Land', 'Commercial', 'Other']
+  const propertyTypes = ['Residential', 'Commercial', 'Land', 'Industrial', 'Mixed Use']
+  const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/
+
+  const validateForm = () => {
+    if (!formData.title.trim()) return 'Property title is required'
+    if (formData.title.trim().length < 5) return 'Title must be at least 5 characters'
+    if (!formData.description.trim()) return 'Description is required'
+    if (formData.description.trim().length < 20) return 'Description must be at least 20 characters'
+    if (!formData.listingType) return 'Listing type is required'
+    if (!formData.propertyType) return 'Property type is required'
+    if (!propertyTypes.includes(formData.propertyType)) return 'Select a valid property type'
+    if (!formData.address.street.trim()) return 'Street address is required'
+    if (!formData.city.trim()) return 'City is required'
+    if (!formData.province || !provinces.includes(formData.province))
+      return 'Province must be a valid Canadian province/territory code'
+    if (!formData.postalCode.trim()) return 'Postal code is required'
+    if (!postalCodeRegex.test(formData.postalCode.trim())) return 'Postal code must match Canadian format (A1A 1A1)'
+
+    const price = parseFloat(formData.price)
+    if (Number.isNaN(price) || price < 0) return 'Price must be a positive number'
+
+    return ''
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setError('')
     setLoading(true)
 
@@ -60,11 +90,51 @@ export default function NewPropertyPage() {
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseFloat(formData.bathrooms) || 0,
         squareFootage: parseInt(formData.squareFootage) || 0,
+        province: formData.province.toUpperCase(),
+        city: formData.city.trim(),
+        postalCode: formData.postalCode.trim(),
+        address: {
+          ...formData.address,
+          street: formData.address.street.trim(),
+          city: formData.city.trim(),
+          province: formData.province.toUpperCase(),
+          postalCode: formData.postalCode.trim(),
+        },
       }
-      await propertiesAPI.create(submitData)
+      console.info('Submitting property listing', submitData)
+      const response = await propertiesAPI.create(submitData)
+      console.info('Create listing response', {
+        status: response.status,
+        data: response.data,
+      })
       router.push('/dashboard?tab=properties')
     } catch (err) {
-      setError(err.response?.data?.message || 'Error creating property listing')
+      const responseData = err.response?.data
+      console.error('Create listing request failed', {
+        status: err.response?.status,
+        data: responseData,
+      })
+
+      let errorMessage = 'Error creating property listing'
+
+      if (responseData?.message) {
+        errorMessage = responseData.message
+      }
+
+      if (responseData?.errors?.length) {
+        const validationMessages = responseData.errors
+          .map((error) => error.msg || error.message)
+          .filter(Boolean)
+        if (validationMessages.length) {
+          errorMessage += `: ${validationMessages.join('; ')}`
+        }
+      }
+
+      if (responseData?.error && !errorMessage.includes(responseData.error)) {
+        errorMessage += ` (${responseData.error})`
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -94,11 +164,11 @@ export default function NewPropertyPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Property Title *
               </label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                value={formData.title}
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
             </div>
@@ -185,7 +255,7 @@ export default function NewPropertyPage() {
                   type="text"
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  value={formData.address.city}
+                  value={formData.city}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -227,11 +297,13 @@ export default function NewPropertyPage() {
               </label>
               <input
                 type="text"
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                value={formData.address.postalCode}
+                value={formData.postalCode}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
+                    postalCode: e.target.value,
                     address: { ...formData.address, postalCode: e.target.value },
                   })
                 }
