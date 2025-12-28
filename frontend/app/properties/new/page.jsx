@@ -79,12 +79,43 @@ export default function NewPropertyPage() {
     return ''
   }
 
+  const formatErrorMessage = (err) => {
+    const responseData = err.response?.data
+    const status = err.response?.status
+
+    const validationMessages = responseData?.errors
+      ?.map((error) => error.msg || error.message)
+      .filter(Boolean)
+
+    const fallbackBody =
+      typeof responseData === 'string'
+        ? responseData
+        : responseData && Object.keys(responseData).length
+          ? JSON.stringify(responseData)
+          : undefined
+
+    let errorMessage =
+      validationMessages?.join('; ')
+      || responseData?.message
+      || responseData?.error
+      || fallbackBody
+      || err.message
+      || 'Error creating property listing'
+
+    if (status) {
+      errorMessage = `(${status}) ${errorMessage}`
+    }
+
+    return { errorMessage, status, responseData }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     const validationError = validateForm()
     if (validationError) {
       setError(validationError)
+      console.warn('Create listing validation failed', { validationError })
       return
     }
 
@@ -139,27 +170,11 @@ export default function NewPropertyPage() {
         return
       }
 
-      const responseData = err.response?.data
-      const status = err.response?.status
+      const { errorMessage, status, responseData } = formatErrorMessage(err)
       console.error('Create listing request failed', {
         status,
         data: responseData,
       })
-
-      const validationMessages = responseData?.errors
-        ?.map((error) => error.msg || error.message)
-        .filter(Boolean)
-
-      let errorMessage =
-        validationMessages?.join('; ')
-        || responseData?.message
-        || responseData?.error
-        || err.message
-        || 'Error creating property listing'
-
-      if (status) {
-        errorMessage = `(${status}) ${errorMessage}`
-      }
 
       setError(errorMessage)
     } finally {
