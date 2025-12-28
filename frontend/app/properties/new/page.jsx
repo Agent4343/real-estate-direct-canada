@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { propertiesAPI } from '@/lib/api'
-import { requireAuth } from '@/lib/auth'
+import { getAuthToken, requireAuth } from '@/lib/auth'
 
 export default function NewPropertyPage() {
   const router = useRouter()
@@ -14,14 +14,16 @@ export default function NewPropertyPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    city: '',
     address: {
       street: '',
       city: '',
-      province: '',
+      province: 'ON',
       postalCode: '',
     },
+    postalCode: '',
     price: '',
-    propertyType: '',
+    propertyType: 'Residential',
     bedrooms: '',
     bathrooms: '',
     squareFootage: '',
@@ -46,25 +48,120 @@ export default function NewPropertyPage() {
   }
 
   const provinces = ['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU']
-  const propertyTypes = ['House', 'Condo', 'Townhouse', 'Apartment', 'Land', 'Commercial', 'Other']
+  const propertyTypes = ['Residential', 'Commercial', 'Land', 'Industrial', 'Mixed Use']
+  const listingTypes = ['Sale', 'Rent']
+  const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/
+
+  const validateForm = () => {
+    if (!formData.title.trim()) return 'Property title is required'
+    if (formData.title.trim().length < 5) return 'Title must be at least 5 characters'
+    if (!formData.description.trim()) return 'Description is required'
+    if (formData.description.trim().length < 20) return 'Description must be at least 20 characters'
+    if (!formData.listingType || !listingTypes.includes(formData.listingType))
+      return 'Listing type is required'
+    if (!formData.propertyType) return 'Property type is required'
+    if (!propertyTypes.includes(formData.propertyType)) return 'Select a valid property type'
+    if (!formData.address.street.trim()) return 'Street address is required'
+    if (!formData.city.trim()) return 'City is required'
+
+    const provinceCode = formData.province?.trim().toUpperCase()
+    if (!provinceCode || !provinces.includes(provinceCode))
+      return 'Province must be a valid Canadian province/territory code'
+
+    const normalizedPostal = formData.postalCode.trim().toUpperCase()
+    if (!normalizedPostal) return 'Postal code is required'
+    if (!postalCodeRegex.test(normalizedPostal))
+      return 'Postal code must match Canadian format (A1A 1A1)'
+
+    const price = parseFloat(formData.price)
+    if (Number.isNaN(price) || price < 0) return 'Price must be a positive number'
+
+    return ''
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     setError('')
     setLoading(true)
 
+    const token = getAuthToken()
+    if (!token) {
+      setError('Please log in again before creating a listing.')
+      setLoading(false)
+      router.push('/login')
+      return
+    }
+
     try {
+      const trimmedTitle = formData.title.trim()
+      const trimmedDescription = formData.description.trim()
+      const normalizedCity = formData.city.trim()
+      const normalizedProvince = formData.province.trim().toUpperCase()
+      const normalizedPostal = formData.postalCode.trim().toUpperCase()
+
       const submitData = {
         ...formData,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        province: normalizedProvince,
+        city: normalizedCity,
+        postalCode: normalizedPostal,
         price: parseFloat(formData.price),
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseFloat(formData.bathrooms) || 0,
         squareFootage: parseInt(formData.squareFootage) || 0,
+        address: {
+          ...formData.address,
+          street: formData.address.street.trim(),
+          city: normalizedCity,
+          province: normalizedProvince,
+          postalCode: normalizedPostal,
+        },
       }
-      await propertiesAPI.create(submitData)
+      console.info('Submitting property listing', submitData)
+      const response = await propertiesAPI.create(submitData)
+      console.info('Create listing response', {
+        status: response.status,
+        data: response.data,
+      })
       router.push('/dashboard?tab=properties')
     } catch (err) {
-      setError(err.response?.data?.message || 'Error creating property listing')
+      if (err.response?.status === 401) {
+        setError('Your session expired. Please log in again to publish your listing.')
+        router.push('/login')
+        return
+      }
+
+      const responseData = err.response?.data
+      const status = err.response?.status
+      console.error('Create listing request failed', {
+        status,
+        data: responseData,
+      })
+
+      const validationMessages = responseData?.errors
+        ?.map((error) => error.msg || error.message)
+        .filter(Boolean)
+
+      let errorMessage =
+        validationMessages?.join('; ')
+        || responseData?.message
+        || responseData?.error
+        || err.message
+        || 'Error creating property listing'
+
+      if (status) {
+        errorMessage = `(${status}) ${errorMessage}`
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -94,11 +191,11 @@ export default function NewPropertyPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Property Title *
               </label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                value={formData.title}
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
             </div>
@@ -142,7 +239,6 @@ export default function NewPropertyPage() {
                   value={formData.propertyType}
                   onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
                 >
-                  <option value="">Select...</option>
                   {propertyTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -185,7 +281,7 @@ export default function NewPropertyPage() {
                   type="text"
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  value={formData.address.city}
+                  value={formData.city}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -223,16 +319,18 @@ export default function NewPropertyPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Postal Code
+                Postal Code *
               </label>
               <input
                 type="text"
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                value={formData.address.postalCode}
+                value={formData.postalCode}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    address: { ...formData.address, postalCode: e.target.value },
+                    postalCode: e.target.value.toUpperCase(),
+                    address: { ...formData.address, postalCode: e.target.value.toUpperCase() },
                   })
                 }
               />
