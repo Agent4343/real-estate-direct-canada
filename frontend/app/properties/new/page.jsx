@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { propertiesAPI } from '@/lib/api'
-import { requireAuth } from '@/lib/auth'
+import { getAuthToken, requireAuth } from '@/lib/auth'
 
 export default function NewPropertyPage() {
   const router = useRouter()
@@ -48,6 +48,7 @@ export default function NewPropertyPage() {
 
   const provinces = ['BC', 'AB', 'SK', 'MB', 'ON', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU']
   const propertyTypes = ['Residential', 'Commercial', 'Land', 'Industrial', 'Mixed Use']
+  const listingTypes = ['Sale', 'Rent']
   const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/
 
   const validateForm = () => {
@@ -55,15 +56,21 @@ export default function NewPropertyPage() {
     if (formData.title.trim().length < 5) return 'Title must be at least 5 characters'
     if (!formData.description.trim()) return 'Description is required'
     if (formData.description.trim().length < 20) return 'Description must be at least 20 characters'
-    if (!formData.listingType) return 'Listing type is required'
+    if (!formData.listingType || !listingTypes.includes(formData.listingType))
+      return 'Listing type is required'
     if (!formData.propertyType) return 'Property type is required'
     if (!propertyTypes.includes(formData.propertyType)) return 'Select a valid property type'
     if (!formData.address.street.trim()) return 'Street address is required'
     if (!formData.city.trim()) return 'City is required'
-    if (!formData.province || !provinces.includes(formData.province))
+
+    const provinceCode = formData.province?.trim().toUpperCase()
+    if (!provinceCode || !provinces.includes(provinceCode))
       return 'Province must be a valid Canadian province/territory code'
-    if (!formData.postalCode.trim()) return 'Postal code is required'
-    if (!postalCodeRegex.test(formData.postalCode.trim())) return 'Postal code must match Canadian format (A1A 1A1)'
+
+    const normalizedPostal = formData.postalCode.trim().toUpperCase()
+    if (!normalizedPostal) return 'Postal code is required'
+    if (!postalCodeRegex.test(normalizedPostal))
+      return 'Postal code must match Canadian format (A1A 1A1)'
 
     const price = parseFloat(formData.price)
     if (Number.isNaN(price) || price < 0) return 'Price must be a positive number'
@@ -83,22 +90,38 @@ export default function NewPropertyPage() {
     setError('')
     setLoading(true)
 
+    const token = getAuthToken()
+    if (!token) {
+      setError('Please log in again before creating a listing.')
+      setLoading(false)
+      router.push('/login')
+      return
+    }
+
     try {
+      const trimmedTitle = formData.title.trim()
+      const trimmedDescription = formData.description.trim()
+      const normalizedCity = formData.city.trim()
+      const normalizedProvince = formData.province.trim().toUpperCase()
+      const normalizedPostal = formData.postalCode.trim().toUpperCase()
+
       const submitData = {
         ...formData,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        province: normalizedProvince,
+        city: normalizedCity,
+        postalCode: normalizedPostal,
         price: parseFloat(formData.price),
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseFloat(formData.bathrooms) || 0,
         squareFootage: parseInt(formData.squareFootage) || 0,
-        province: formData.province.toUpperCase(),
-        city: formData.city.trim(),
-        postalCode: formData.postalCode.trim(),
         address: {
           ...formData.address,
           street: formData.address.street.trim(),
-          city: formData.city.trim(),
-          province: formData.province.toUpperCase(),
-          postalCode: formData.postalCode.trim(),
+          city: normalizedCity,
+          province: normalizedProvince,
+          postalCode: normalizedPostal,
         },
       }
       console.info('Submitting property listing', submitData)
@@ -109,6 +132,12 @@ export default function NewPropertyPage() {
       })
       router.push('/dashboard?tab=properties')
     } catch (err) {
+      if (err.response?.status === 401) {
+        setError('Your session expired. Please log in again to publish your listing.')
+        router.push('/login')
+        return
+      }
+
       const responseData = err.response?.data
       console.error('Create listing request failed', {
         status: err.response?.status,
@@ -121,17 +150,19 @@ export default function NewPropertyPage() {
         errorMessage = responseData.message
       }
 
-      if (responseData?.errors?.length) {
-        const validationMessages = responseData.errors
-          .map((error) => error.msg || error.message)
-          .filter(Boolean)
-        if (validationMessages.length) {
-          errorMessage += `: ${validationMessages.join('; ')}`
-        }
+      const validationMessages = responseData?.errors
+        ?.map((error) => error.msg || error.message)
+        .filter(Boolean)
+      if (validationMessages?.length) {
+        errorMessage += `: ${validationMessages.join('; ')}`
       }
 
       if (responseData?.error && !errorMessage.includes(responseData.error)) {
         errorMessage += ` (${responseData.error})`
+      }
+
+      if (!responseData && err.message) {
+        errorMessage = err.message
       }
 
       setError(errorMessage)
