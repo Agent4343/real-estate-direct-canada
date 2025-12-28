@@ -57,6 +57,7 @@ export const authAPI = {
 // Properties API
 export const propertiesAPI = {
   getAll: (params) => api.get('/api/properties', { params }),
+  getMine: (params) => api.get('/api/properties/mine', { params }),
   getById: (id) => api.get(`/api/properties/${id}`),
   create: (data) => api.post('/api/properties', data),
   update: (id, data) => api.put(`/api/properties/${id}`, data),
@@ -80,7 +81,13 @@ export const transactionsAPI = {
 export const mortgagesAPI = {
   getAll: () => api.get('/api/mortgages'),
   getByProvince: (province) => api.get(`/api/mortgages/province/${province}`),
-  getBest: (province) => api.get(`/api/mortgages/best/${province}`),
+  getBest: (province, filters = {}) => {
+    const params = { ...(filters || {}) };
+    if (province) {
+      params.province = province;
+    }
+    return api.get('/api/mortgages/best', { params });
+  },
 };
 
 // Lawyers API

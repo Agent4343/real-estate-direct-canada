@@ -136,6 +136,56 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/properties/mine
+ * @desc    Get properties created by the authenticated user
+ * @access  Private
+ */
+router.get('/mine', authenticateToken, async (req, res) => {
+  try {
+    const {
+      status,
+      page = 1,
+      limit = 20,
+      sortBy = 'updatedAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const query = {
+      sellerId: req.user.userId
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+    const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+    const [properties, total] = await Promise.all([
+      Property.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(Number(limit)),
+      Property.countDocuments(query)
+    ]);
+
+    res.json({
+      properties,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(total / limit),
+        totalProperties: total,
+        hasNext: skip + properties.length < total,
+        hasPrev: page > 1
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching user properties:', err);
+    res.status(500).json({ message: 'Error fetching properties', error: err.message });
+  }
+});
+
+/**
  * @route   GET /api/properties/:id
  * @desc    Get single property by ID
  * @access  Public
