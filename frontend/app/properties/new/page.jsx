@@ -17,12 +17,12 @@ export default function NewPropertyPage() {
     city: '',
     address: {
       street: '',
-      province: '',
+      province: 'ON',
       postalCode: '',
     },
     postalCode: '',
     price: '',
-    propertyType: '',
+    propertyType: 'Residential',
     bedrooms: '',
     bathrooms: '',
     squareFootage: '',
@@ -139,30 +139,25 @@ export default function NewPropertyPage() {
       }
 
       const responseData = err.response?.data
+      const status = err.response?.status
       console.error('Create listing request failed', {
-        status: err.response?.status,
+        status,
         data: responseData,
       })
-
-      let errorMessage = 'Error creating property listing'
-
-      if (responseData?.message) {
-        errorMessage = responseData.message
-      }
 
       const validationMessages = responseData?.errors
         ?.map((error) => error.msg || error.message)
         .filter(Boolean)
-      if (validationMessages?.length) {
-        errorMessage += `: ${validationMessages.join('; ')}`
-      }
 
-      if (responseData?.error && !errorMessage.includes(responseData.error)) {
-        errorMessage += ` (${responseData.error})`
-      }
+      let errorMessage =
+        validationMessages?.join('; ')
+        || responseData?.message
+        || responseData?.error
+        || err.message
+        || 'Error creating property listing'
 
-      if (!responseData && err.message) {
-        errorMessage = err.message
+      if (status) {
+        errorMessage = `(${status}) ${errorMessage}`
       }
 
       setError(errorMessage)
